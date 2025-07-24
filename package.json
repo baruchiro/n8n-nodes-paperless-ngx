@@ -1,19 +1,22 @@
 {
-  "name": "n8n-nodes-<...>",
+  "name": "n8n-nodes-paperless-ngx",
   "version": "0.1.0",
-  "description": "",
+  "description": "n8n community nodes for Paperless-ngx document management system",
   "keywords": [
-    "n8n-community-node-package"
+    "n8n-community-node-package",
+    "paperless-ngx",
+    "document-management",
+    "ocr"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/baruchiro/n8n-nodes-paperless-ngx",
   "author": {
-    "name": "",
-    "email": ""
+    "name": "Baruch Odem",
+    "email": "baruchiro@gmail.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/<...>/n8n-nodes-<...>.git"
+    "url": "https://github.com/baruchiro/n8n-nodes-paperless-ngx.git"
   },
   "engines": {
     "node": ">=20.15"
@@ -33,12 +36,12 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/ExampleCredentialsApi.credentials.js",
-      "dist/credentials/HttpBinApi.credentials.js"
+      "dist/credentials/PaperlessNgxApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ExampleNode/ExampleNode.node.js",
-      "dist/nodes/HttpBin/HttpBin.node.js"
+      "dist/nodes/PaperlessDocuments/PaperlessDocuments.node.js",
+      "dist/nodes/PaperlessTags/PaperlessTags.node.js",
+      "dist/nodes/PaperlessDocumentDetails/PaperlessDocumentDetails.node.js"
     ]
   },
   "devDependencies": {
