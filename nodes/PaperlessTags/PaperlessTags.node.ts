@@ -4,7 +4,8 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionType, IDataObject } from 'n8n-workflow';
+import { IDataObject, NodeConnectionType } from 'n8n-workflow';
+import { createEnhancedError, handlePaperlessError } from '../shared/errorHandler';
 
 export class PaperlessTags implements INodeType {
 	description: INodeTypeDescription = {
@@ -54,9 +55,7 @@ export class PaperlessTags implements INodeType {
 				noDataExpression: true,
 				displayOptions: {
 					show: {
-						resource: [
-							'tag',
-						],
+						resource: ['tag'],
 					},
 				},
 				options: [
@@ -80,12 +79,8 @@ export class PaperlessTags implements INodeType {
 				type: 'number',
 				displayOptions: {
 					show: {
-						resource: [
-							'tag',
-						],
-						operation: [
-							'getTagById',
-						],
+						resource: ['tag'],
+						operation: ['getTagById'],
 					},
 				},
 				default: '',
@@ -98,12 +93,8 @@ export class PaperlessTags implements INodeType {
 				type: 'number',
 				displayOptions: {
 					show: {
-						resource: [
-							'tag',
-						],
-						operation: [
-							'getAllTags',
-						],
+						resource: ['tag'],
+						operation: ['getAllTags'],
 					},
 				},
 				default: 1,
@@ -115,12 +106,8 @@ export class PaperlessTags implements INodeType {
 				type: 'number',
 				displayOptions: {
 					show: {
-						resource: [
-							'tag',
-						],
-						operation: [
-							'getAllTags',
-						],
+						resource: ['tag'],
+						operation: ['getAllTags'],
 					},
 				},
 				default: 25,
@@ -132,12 +119,8 @@ export class PaperlessTags implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
-						resource: [
-							'tag',
-						],
-						operation: [
-							'getAllTags',
-						],
+						resource: ['tag'],
+						operation: ['getAllTags'],
 					},
 				},
 				options: [
@@ -187,43 +170,66 @@ export class PaperlessTags implements INodeType {
 							ordering,
 						};
 
-						responseData = await this.helpers.requestWithAuthentication.call(this, 'paperlessNgxApi', {
-							method: 'GET',
-							url: '/api/tags/',
-							qs,
-						});
+						responseData = await this.helpers.requestWithAuthentication.call(
+							this,
+							'paperlessNgxApi',
+							{
+								method: 'GET',
+								url: '/api/tags/',
+								qs,
+							},
+						);
 					} else if (operation === 'getTagById') {
 						const tagId = this.getNodeParameter('tagId', i) as number;
 
-						responseData = await this.helpers.requestWithAuthentication.call(this, 'paperlessNgxApi', {
-							method: 'GET',
-							url: `/api/tags/${tagId}/`,
-						});
+						responseData = await this.helpers.requestWithAuthentication.call(
+							this,
+							'paperlessNgxApi',
+							{
+								method: 'GET',
+								url: `/api/tags/${tagId}/`,
+							},
+						);
 					}
 				}
 
 				if (Array.isArray(responseData)) {
-					returnData.push(...this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray(responseData),
-						{ itemData: { item: i } },
-					));
-				} else if (responseData !== undefined) {
 					returnData.push(
-						{
-							json: responseData,
-						},
+						...this.helpers.constructExecutionMetaData(this.helpers.returnJsonArray(responseData), {
+							itemData: { item: i },
+						}),
 					);
+				} else if (responseData !== undefined) {
+					returnData.push({
+						json: responseData,
+					});
 				}
 			} catch (error) {
+				let url = '/api/tags/';
+				if (operation === 'getTagById') {
+					const tagId = this.getNodeParameter('tagId', i) as number;
+					url = `/api/tags/${tagId}/`;
+				}
+
+				const detailedError = await handlePaperlessError.call(
+					this,
+					error,
+					operation,
+					resource,
+					url,
+					i,
+				);
+
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {
-							error: error.message,
+							error: detailedError,
 						},
 					});
 					continue;
 				}
-				throw error;
+
+				throw createEnhancedError(detailedError);
 			}
 		}
 

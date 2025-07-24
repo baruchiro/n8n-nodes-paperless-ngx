@@ -5,6 +5,7 @@ import type {
 	INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeConnectionType } from 'n8n-workflow';
+import { createEnhancedError, handlePaperlessError } from '../shared/errorHandler';
 
 export class PaperlessDocumentDetails implements INodeType {
 	description: INodeTypeDescription = {
@@ -54,9 +55,7 @@ export class PaperlessDocumentDetails implements INodeType {
 				noDataExpression: true,
 				displayOptions: {
 					show: {
-						resource: [
-							'document',
-						],
+						resource: ['document'],
 					},
 				},
 				options: [
@@ -87,9 +86,7 @@ export class PaperlessDocumentDetails implements INodeType {
 				type: 'number',
 				displayOptions: {
 					show: {
-						resource: [
-							'document',
-						],
+						resource: ['document'],
 					},
 				},
 				default: '',
@@ -114,45 +111,74 @@ export class PaperlessDocumentDetails implements INodeType {
 					const documentId = this.getNodeParameter('documentId', i) as number;
 
 					if (operation === 'getDocumentById') {
-						responseData = await this.helpers.requestWithAuthentication.call(this, 'paperlessNgxApi', {
-							method: 'GET',
-							url: `/api/documents/${documentId}/`,
-						});
+						responseData = await this.helpers.requestWithAuthentication.call(
+							this,
+							'paperlessNgxApi',
+							{
+								method: 'GET',
+								url: `/api/documents/${documentId}/`,
+							},
+						);
 					} else if (operation === 'getDocumentMetadata') {
-						responseData = await this.helpers.requestWithAuthentication.call(this, 'paperlessNgxApi', {
-							method: 'GET',
-							url: `/api/documents/${documentId}/metadata/`,
-						});
+						responseData = await this.helpers.requestWithAuthentication.call(
+							this,
+							'paperlessNgxApi',
+							{
+								method: 'GET',
+								url: `/api/documents/${documentId}/metadata/`,
+							},
+						);
 					} else if (operation === 'getDocumentHistory') {
-						responseData = await this.helpers.requestWithAuthentication.call(this, 'paperlessNgxApi', {
-							method: 'GET',
-							url: `/api/documents/${documentId}/history/`,
-						});
+						responseData = await this.helpers.requestWithAuthentication.call(
+							this,
+							'paperlessNgxApi',
+							{
+								method: 'GET',
+								url: `/api/documents/${documentId}/history/`,
+							},
+						);
 					}
 				}
 
 				if (Array.isArray(responseData)) {
-					returnData.push(...this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray(responseData),
-						{ itemData: { item: i } },
-					));
-				} else if (responseData !== undefined) {
 					returnData.push(
-						{
-							json: responseData,
-						},
+						...this.helpers.constructExecutionMetaData(this.helpers.returnJsonArray(responseData), {
+							itemData: { item: i },
+						}),
 					);
+				} else if (responseData !== undefined) {
+					returnData.push({
+						json: responseData,
+					});
 				}
 			} catch (error) {
+				const documentId = this.getNodeParameter('documentId', i) as number;
+				let url = `/api/documents/${documentId}/`;
+				if (operation === 'getDocumentMetadata') {
+					url = `/api/documents/${documentId}/metadata/`;
+				} else if (operation === 'getDocumentHistory') {
+					url = `/api/documents/${documentId}/history/`;
+				}
+
+				const detailedError = await handlePaperlessError.call(
+					this,
+					error,
+					operation,
+					resource,
+					url,
+					i,
+				);
+
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {
-							error: error.message,
+							error: detailedError,
 						},
 					});
 					continue;
 				}
-				throw error;
+
+				throw createEnhancedError(detailedError);
 			}
 		}
 

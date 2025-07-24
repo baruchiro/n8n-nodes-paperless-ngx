@@ -4,7 +4,8 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionType, IDataObject } from 'n8n-workflow';
+import { IDataObject, NodeConnectionType } from 'n8n-workflow';
+import { createEnhancedError, handlePaperlessError } from '../shared/errorHandler';
 
 export class PaperlessDocuments implements INodeType {
 	description: INodeTypeDescription = {
@@ -224,15 +225,25 @@ export class PaperlessDocuments implements INodeType {
 					});
 				}
 			} catch (error) {
+				const detailedError = await handlePaperlessError.call(
+					this,
+					error,
+					operation,
+					resource,
+					'/api/documents/',
+					i,
+				);
+
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {
-							error: error.message,
+							error: detailedError,
 						},
 					});
 					continue;
 				}
-				throw error;
+
+				throw createEnhancedError(detailedError);
 			}
 		}
 

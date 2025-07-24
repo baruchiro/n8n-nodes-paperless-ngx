@@ -1,4 +1,4 @@
-import { ICredentialType, INodeProperties } from 'n8n-workflow';
+import { IAuthenticateGeneric, ICredentialType, INodeProperties } from 'n8n-workflow';
 
 export class PaperlessNgxApi implements ICredentialType {
 	name = 'paperlessNgxApi';
@@ -26,4 +26,13 @@ export class PaperlessNgxApi implements ICredentialType {
 			required: true,
 		},
 	];
+
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {
+			headers: {
+				Authorization: '={{"Token " + $credentials.token}}',
+			},
+		},
+	};
 }
